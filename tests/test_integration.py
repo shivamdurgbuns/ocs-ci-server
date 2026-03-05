@@ -1,10 +1,14 @@
 """
 Integration tests for ocs-ci MCP server against real ocs-ci repository.
 
-These tests validate the entire system against the actual ocs-ci codebase
-at /Users/sdurgbun/code/redhat/odf/ocs-ci
+These tests validate the entire system against the actual ocs-ci codebase.
+Set OCS_CI_REPO_PATH to the path of a local ocs-ci clone to run them:
+
+    export OCS_CI_REPO_PATH=/path/to/ocs-ci
+    pytest tests/test_integration.py -v -m integration
 """
 
+import os
 import pytest
 import time
 from pathlib import Path
@@ -24,20 +28,36 @@ from tools.get_conftest import get_conftest_tool
 from tools.get_conf_file import get_conf_file_tool
 
 
-# Real ocs-ci repository path
-REAL_REPO_PATH = "/Users/sdurgbun/code/redhat/odf/ocs-ci"
+def _get_real_repo_path():
+    """Resolve real ocs-ci repo path from environment; None if not set or invalid."""
+    path = os.environ.get("OCS_CI_REPO_PATH")
+    if not path or not path.strip():
+        return None
+    resolved = Path(path.strip()).resolve()
+    return str(resolved) if resolved.exists() and resolved.is_dir() else None
 
 
 @pytest.fixture
-def real_server():
+def real_repo_path():
+    """Path to real ocs-ci repository; skips integration tests if not configured."""
+    path = _get_real_repo_path()
+    if path is None:
+        pytest.skip(
+            "Set OCS_CI_REPO_PATH to the path of an ocs-ci clone to run integration tests"
+        )
+    return path
+
+
+@pytest.fixture
+def real_server(real_repo_path):
     """Create server instance pointing to real ocs-ci repository"""
-    return OCCIMCPServer(repo_path=REAL_REPO_PATH)
+    return OCCIMCPServer(repo_path=real_repo_path)
 
 
 @pytest.fixture
-def real_server_with_sensitive():
+def real_server_with_sensitive(real_repo_path):
     """Create server instance with sensitive directory access enabled"""
-    return OCCIMCPServer(repo_path=REAL_REPO_PATH, allow_sensitive=True)
+    return OCCIMCPServer(repo_path=real_repo_path, allow_sensitive=True)
 
 
 # ============================================================================
@@ -560,12 +580,12 @@ def test_inheritance_chain_real(real_server):
 
 
 @pytest.mark.integration
-def test_repository_exists():
+def test_repository_exists(real_repo_path):
     """Verify real repository exists and has expected structure"""
-    repo_path = Path(REAL_REPO_PATH)
+    repo_path = Path(real_repo_path)
 
-    assert repo_path.exists(), f"Repository not found at {REAL_REPO_PATH}"
-    assert repo_path.is_dir(), f"Repository path is not a directory: {REAL_REPO_PATH}"
+    assert repo_path.exists(), f"Repository not found at {real_repo_path}"
+    assert repo_path.is_dir(), f"Repository path is not a directory: {real_repo_path}"
 
     # Check for key directories
     assert (repo_path / "ocs_ci").exists(), "ocs_ci directory not found"
