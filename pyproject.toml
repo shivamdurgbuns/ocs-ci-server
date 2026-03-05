@@ -1,0 +1,23 @@
+[project]
+name = "ocs-ci-mcp-server"
+version = "0.1.0"
+description = "MCP server for ocs-ci repository analysis"
+requires-python = ">=3.9"
+dependencies = [
+    "mcp>=0.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: integration tests against real ocs-ci repository",
+]
